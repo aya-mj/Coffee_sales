@@ -26,13 +26,6 @@ sales_by_day.rename(columns = {'money':'total_sales'}, inplace = True)
 sales_by_month = df.groupby('month').agg({'money': 'sum'}).reset_index()
 sales_by_month.rename(columns = {'money':'total_sales'}, inplace = True)
 
-# plt.figure(figsize=(12, 6))
-# plt.plot(sales_by_month['month'], sales_by_month['total_sales'],label = 'monthly Sales')
-# plt.xlabel('Date')
-# plt.ylabel('Total Sales')
-# plt.title('monthly Sales Over Time')
-# plt.legend()
-# plt.show() 
 
 sales_by_month['previous_month_sales'] = sales_by_month['total_sales'].shift(1)
 sales_by_month = sales_by_month.dropna()
@@ -115,3 +108,42 @@ next_month_sales = model.predict([[previous_month_sales]])[0]
 if st.button('Predict'):
     st.write(f'The predicted total sales for the next month are: {next_month_sales:.2f}')
 
+
+
+st.write(sales_by_month)
+f = plt.figure(figsize=(12, 6))
+plt.plot(sales_by_month['month'], sales_by_month['total_sales'],label = 'monthly Sales')
+plt.xlabel('Date')
+plt.ylabel('Total Sales')
+plt.title('monthly Sales Over Time')
+plt.legend()
+st.pyplot(f)
+
+from statsmodels.tsa.arima.model import ARIMA
+sales_by_month.set_index('month', inplace=True)
+if not isinstance(sales_by_month.index, pd.DatetimeIndex):
+    sales_by_month.index = pd.to_datetime(sales_by_month.index)
+
+# Fit ARIMA model
+arima_model = ARIMA(sales_by_month['total_sales'], order=(1, 1, 1))
+arima_model_fit = arima_model.fit()
+
+# Forecast next month's sales
+forecast_step = 1
+forecast_model = arima_model_fit.forecast(steps=forecast_step)
+next_month_sales = forecast_model[0]
+
+# Determine forecast date
+forecast_date = sales_by_month.index[-1] + pd.DateOffset(months=1)
+
+# Plot actual and forecasted sales
+fig4 = plt.figure(figsize=(12, 6))
+plt.plot(sales_by_month.index, sales_by_month['total_sales'], label='Actual Sales', marker='o')
+plt.scatter(forecast_date, next_month_sales, color='red', label='Forecasted Sales')
+plt.xlabel('Date')
+plt.ylabel('Total Sales')
+plt.title('Monthly Sales Over Time')
+plt.axvline(forecast_date, color='gray', linestyle='--', alpha=0.7)
+plt.legend()
+plt.grid()
+st.pyplot(fig4)
