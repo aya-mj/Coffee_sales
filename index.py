@@ -105,8 +105,8 @@ st.pyplot(fig3)
 st.write('Enter the previous month sales to predict the total sales for the next month.')
 previous_month_sales = st.number_input('Previous Month Sales', value=0)
 next_month_sales = model.predict([[previous_month_sales]])[0]
-if st.button('Predict'):
-    st.write(f'The predicted total sales for the next month are: {next_month_sales:.2f}')
+# if st.button('Predict'):
+#     st.write(f'The predicted total sales for the next month are: {next_month_sales:.2f}')
 
 
 
@@ -120,30 +120,65 @@ plt.legend()
 st.pyplot(f)
 
 from statsmodels.tsa.arima.model import ARIMA
-sales_by_month.set_index('month', inplace=True)
-if not isinstance(sales_by_month.index, pd.DatetimeIndex):
-    sales_by_month.index = pd.to_datetime(sales_by_month.index)
 
-# Fit ARIMA model
+
+# Ensure 'year' and 'month' columns exist
+if 'year' not in sales_by_month.columns:
+    sales_by_month['year'] = df['date'].dt.year
+if 'month' not in sales_by_month.columns:
+    sales_by_month['month'] = df['date'].dt.month
+
+# Combine year and month into a proper datetime index
+sales_by_month['year_month'] = pd.to_datetime(sales_by_month[['year', 'month']].assign(day=1))
+sales_by_month.set_index('year_month', inplace=True)
+
+
+# Check if the DataFrame is ready for ARIMA
+print(sales_by_month.head())
+
+# Fit ARIMA model to the monthly sales data
 arima_model = ARIMA(sales_by_month['total_sales'], order=(1, 1, 1))
 arima_model_fit = arima_model.fit()
 
 # Forecast next month's sales
-forecast_step = 1
-forecast_model = arima_model_fit.forecast(steps=forecast_step)
-next_month_sales = forecast_model[0]
+forecast_steps = 1
+forecast_model = arima_model_fit.forecast(steps=forecast_steps)
+next_month_sales = forecast_model.iloc[0]  # Get the first forecasted value
 
-# Determine forecast date
+# Calculate the forecasted date
 forecast_date = sales_by_month.index[-1] + pd.DateOffset(months=1)
 
-# Plot actual and forecasted sales
+# Display the forecasted sales and date
+st.write(f"Forecasted Sales for {forecast_date.strftime('%Y-%m')}: {next_month_sales:.2f}")
+
+
+
+date_input_predicted = st.date_input("Enter the date u want to predict from : ")
+date_input_predicted = pd.to_datetime(date_input_predicted)
+
+if st.button("Predict"):
+    # Calculate the number of months between the last known date and the entered date
+    months_diff = (date_input_predicted.year - forecast_date.year) * 12 + (date_input_predicted.month - forecast_date.month)
+
+    if months_diff < 0:
+        result = "The entered date is before the last forecasted date. Please choose a future date."
+    else:
+        # Forecast sales for the required number of months
+        forecast_values = arima_model_fit.forecast(steps=months_diff + 1)
+        predicted_sales = forecast_values.iloc[-1]
+
+        result = f"The predicted sales for {date_input_predicted.strftime('%Y-%m')} are: {predicted_sales:.2f}"
+
+    st.write(result)
+
+# Plot actual sales and forecasted sales
 fig4 = plt.figure(figsize=(12, 6))
 plt.plot(sales_by_month.index, sales_by_month['total_sales'], label='Actual Sales', marker='o')
-plt.scatter(forecast_date, next_month_sales, color='red', label='Forecasted Sales')
+plt.scatter(forecast_date, next_month_sales, color='red', label='Forecasted Sales', zorder=5)
+plt.axvline(forecast_date, color='gray', linestyle='--', alpha=0.7)
 plt.xlabel('Date')
 plt.ylabel('Total Sales')
-plt.title('Monthly Sales Over Time')
-plt.axvline(forecast_date, color='gray', linestyle='--', alpha=0.7)
+plt.title('Monthly Sales Over Time with ARIMA Forecast')
 plt.legend()
 plt.grid()
 st.pyplot(fig4)
