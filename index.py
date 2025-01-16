@@ -41,13 +41,18 @@ y_pred = model.predict(X_test)
 
 st.title('Coffee Sales Prediction')
 
+st.header(' Data Overview')
+st.write('This application analyzes coffee sales data and provides predictions for future sales.')
+st.write(sales_by_month)
+
 RMSE = np.sqrt(mean_squared_error(y_test,y_pred))
-print(RMSE)
+# print(RMSE)
 MSE = mean_squared_error(y_test,y_pred)
-print(MSE)
+# print(MSE)
 
 sales_by_month.to_csv('sales_by_month.csv',index=False)
-st.write(sales_by_month)
+
+st.write('Sales by month')
 fig = plt.figure(figsize=(12, 6))
 plt.plot(y_test.values,label = 'actual')
 plt.plot(y_pred,label = 'predicted')
@@ -102,15 +107,15 @@ plt.title('Proportion of Coffee Sales', fontsize=14)
 plt.tight_layout()
 st.pyplot(fig3)
 
-st.write('Enter the previous month sales to predict the total sales for the next month.')
-previous_month_sales = st.number_input('Previous Month Sales', value=0)
-next_month_sales = model.predict([[previous_month_sales]])[0]
-# if st.button('Predict'):
-#     st.write(f'The predicted total sales for the next month are: {next_month_sales:.2f}')
+# st.write('Enter the previous month sales to predict the total sales for the next month.')
+# previous_month_sales = st.number_input('Previous Month Sales', value=0)
+# next_month_sales = model.predict([[previous_month_sales]])[0]
+# # if st.button('Predict'):
+# #     st.write(f'The predicted total sales for the next month are: {next_month_sales:.2f}')
 
 
 
-st.write(sales_by_month)
+st.write("sales_by_month")
 f = plt.figure(figsize=(12, 6))
 plt.plot(sales_by_month['month'], sales_by_month['total_sales'],label = 'monthly Sales')
 plt.xlabel('Date')
@@ -119,8 +124,10 @@ plt.title('monthly Sales Over Time')
 plt.legend()
 st.pyplot(f)
 
-from statsmodels.tsa.arima.model import ARIMA
+st.header('ARIMA Model')
+st.write('This section uses ARIMA (AutoRegressive Integrated Moving Average) model to forecast coffee sales for the next month.')
 
+from statsmodels.tsa.arima.model import ARIMA
 
 # Ensure 'year' and 'month' columns exist
 if 'year' not in sales_by_month.columns:
@@ -152,12 +159,23 @@ forecast_date = sales_by_month.index[-1] + pd.DateOffset(months=1)
 st.write(f"Forecasted Sales for {forecast_date.strftime('%Y-%m')}: {next_month_sales:.2f}")
 
 
+# Plot actual sales and forecasted sales
+fig4 = plt.figure(figsize=(12, 6))
+plt.plot(sales_by_month.index, sales_by_month['total_sales'], label='Actual Sales', marker='o')
+plt.scatter(forecast_date, next_month_sales, color='red', label='Forecasted Sales', zorder=5)
+plt.axvline(forecast_date, color='gray', linestyle='--', alpha=0.7)
+plt.xlabel('Date')
+plt.ylabel('Total Sales')
+plt.title('Monthly Sales Over Time with ARIMA Forecast')
+plt.legend()
+plt.grid()
+st.pyplot(fig4)
+
 
 date_input_predicted = st.date_input("Enter the date u want to predict from : ")
 date_input_predicted = pd.to_datetime(date_input_predicted)
 
 if st.button("Predict"):
-    # Calculate the number of months between the last known date and the entered date
     months_diff = (date_input_predicted.year - forecast_date.year) * 12 + (date_input_predicted.month - forecast_date.month)
 
     if months_diff < 0:
@@ -171,14 +189,3 @@ if st.button("Predict"):
 
     st.write(result)
 
-# Plot actual sales and forecasted sales
-fig4 = plt.figure(figsize=(12, 6))
-plt.plot(sales_by_month.index, sales_by_month['total_sales'], label='Actual Sales', marker='o')
-plt.scatter(forecast_date, next_month_sales, color='red', label='Forecasted Sales', zorder=5)
-plt.axvline(forecast_date, color='gray', linestyle='--', alpha=0.7)
-plt.xlabel('Date')
-plt.ylabel('Total Sales')
-plt.title('Monthly Sales Over Time with ARIMA Forecast')
-plt.legend()
-plt.grid()
-st.pyplot(fig4)
